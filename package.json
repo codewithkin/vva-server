@@ -1,13 +1,14 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc --build",
+    "build": "tsc && npx prisma generate",
     "format": "npx prettier --write .",
-    "generate": "npx prisma generate"
+    "generate": "npx prisma generate",
+    "migrate": "npx prisma migrate dev"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +18,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/morgan": "^1.9.10",
+    "@types/node": "^20.19.0",
     "morgan": "^1.10.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.9.0",
