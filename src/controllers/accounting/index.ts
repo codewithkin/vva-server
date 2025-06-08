@@ -7,19 +7,19 @@ const getAllData = asyncHandler(async (req: Request, res: Response) => {
     // Fetch all data in parallel for performance
     const [students, invoices, uniforms] = await Promise.all([
       prisma.student.findMany({
-        take: 10, // Limit to 10 recent students (adjust as needed)
+        take: 200, // Limit to 10 recent students (adjust as needed)
         include: {
-          invoices: {take: 3}, // Include last 3 invoices per student
-          uniforms: {take: 2}, // Include last 2 uniform issues
+          invoices: {take: 20}, // Include last 3 invoices per student
+          uniforms: {take: 20}, // Include last 2 uniform issues
         },
       }),
       prisma.invoice.findMany({
         where: {status: "Pending"}, // Focus on pending invoices
-        take: 5,
+        take: 100,
         orderBy: {dueDate: "asc"}, // Sort by urgency
       }),
       prisma.uniformIssue.findMany({
-        take: 5,
+        take: 100,
         orderBy: {date: "desc"},
         include: {student: true}, // Include student details
       }),
