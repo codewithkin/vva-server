@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
+import appRouter from "./routes";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(cors({
 app.use(morgan("dev"));
 
 // Routes
+app.use("/api", appRouter);
 
 // Catch-All route
 app.use("*", (req: Request, res: Response) => {
