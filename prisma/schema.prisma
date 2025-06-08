@@ -13,3 +13,43 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Student {
+  id          String     @id @default(uuid())
+  admissionId String     @unique // e.g., VVA-2024-001
+  name        String
+  class       String
+  contact     String
+  parentContact String
+  invoices    Invoice[]
+  uniforms    UniformIssue[]
+}
+
+model Invoice {
+  id          String     @id @default(uuid())
+  student     Student    @relation(fields: [studentId], references: [id])
+  studentId   String
+  items       Json       // { feeType: "Uniform", amount: 50 }
+  total       Float
+  dueDate     DateTime
+  status      String     // "Paid", "Pending", "Credit"
+  payments    Payment[]
+}
+
+model UniformIssue {
+  id          String     @id @default(uuid())
+  student     Student    @relation(fields: [studentId], references: [id])
+  studentId   String
+  items       Json       // { type: "Shirt", quantity: 2 }
+  date        DateTime
+  isCredit    Boolean    @default(false)
+}
+
+model Payment {
+  id          String     @id @default(uuid())
+  invoice     Invoice    @relation(fields: [invoiceId], references: [id])
+  invoiceId   String
+  amount      Float
+  method      String     // "Cash", "Mobile Money"
+  date        DateTime
+}
