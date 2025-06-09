@@ -44,6 +44,7 @@ model UniformIssue {
   items       Json       // { type: "Shirt", quantity: 2 }
   date        DateTime
   isCredit    Boolean    @default(false)
+  createdAt   DateTime @default(now())
 }
 
 model Payment {
@@ -53,4 +54,5 @@ model Payment {
   amount      Float
   method      String  
   date        DateTime
+  createdAt   DateTime @default(now())
 }
