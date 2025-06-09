@@ -5,6 +5,7 @@ export const getAllInvoices = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const take = limit === 0 ? undefined : limit; // Return all if limit is 0
     const status = req.query.status as string | undefined;
     const skip = (page - 1) * limit;
 
@@ -13,7 +14,7 @@ export const getAllInvoices = async (req: Request, res: Response) => {
     const [invoices, totalCount] = await Promise.all([
       prisma.invoice.findMany({
         skip,
-        take: limit,
+        take, // Use 'take' instead of 'limit'
         where: whereClause,
         orderBy: {dueDate: "asc"},
         include: {
@@ -36,7 +37,7 @@ export const getAllInvoices = async (req: Request, res: Response) => {
         total: totalCount,
         page,
         limit,
-        totalPages: Math.ceil(totalCount / limit),
+        totalPages: limit === 0 ? 1 : Math.ceil(totalCount / limit),
       },
     });
   } catch (error) {
