@@ -11,7 +11,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma client and compile TypeScript
+# ✅ Generate Prisma client BEFORE build
+RUN npx prisma generate
+
+# Compile TypeScript
 RUN npm run build
 
 # Stage 2: Production image
@@ -23,7 +26,7 @@ WORKDIR /app
 # Set NODE_ENV for production
 ENV NODE_ENV=production
 
-# Install only production deps
+# Install only production dependencies
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
@@ -33,10 +36,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Include any needed .env file
+# Include any needed .env file (make sure it exists and is not in .dockerignore)
 COPY .env .env
 
-# Expose the server port (change if needed)
+# Expose the server port
 EXPOSE 8080
 
 # Start the app
