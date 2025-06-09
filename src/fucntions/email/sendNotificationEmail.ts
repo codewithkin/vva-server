@@ -8,7 +8,7 @@ export default async function sendNotificationEmail(
     const transporter = nodemailer.createTransport({
       service: "gmail", // or your email provider
       auth: {
-        user: process.env.EMAIL_USER,
+        user: "kinzinzombe07@gmail.com",
         pass: process.env.EMAIL_PASS,
       },
     });
