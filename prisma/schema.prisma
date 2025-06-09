@@ -16,11 +16,11 @@ datasource db {
 
 model Student {
   id          String     @id @default(uuid())
-  admissionId String     @unique // e.g., VVA-2024-001
-  name        String
+  name        String      @unique
   class       String
   contact     String
   parentContact String
+  createdAt   DateTime @default(now())
   invoices    Invoice[]
   uniforms    UniformIssue[]
 }

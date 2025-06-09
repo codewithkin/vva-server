@@ -21,7 +21,6 @@ export const getAllInvoices = async (req: Request, res: Response) => {
           student: {
             select: {
               name: true,
-              admissionId: true,
             },
           },
           payments: true,

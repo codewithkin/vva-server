@@ -8,19 +8,18 @@ export const createStudent = async (
 ) => {
   try {
     const {
-      admissionId,
       name,
       class: studentClass,
       contact,
       parentContact,
     } = req.body;
 
-    if (!admissionId || !name || !studentClass || !contact || !parentContact) {
+    if (!name || !studentClass || !contact || !parentContact) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    const existing = await prisma.student.findUnique({
-      where: { admissionId },
+    const existing = await prisma.student.findFirst({
+      where: { name },
     });
 
     if (existing) {
@@ -29,7 +28,6 @@ export const createStudent = async (
 
     const student = await prisma.student.create({
       data: {
-        admissionId,
         name,
         class: studentClass,
         contact,
@@ -95,7 +93,6 @@ export const getAllStudents = async (req: Request, res: Response) => {
         "Parent Contact",
       ];
       const records = filtered.map((s) => [
-        s.admissionId,
         s.name,
         s.class,
         s.contact,
