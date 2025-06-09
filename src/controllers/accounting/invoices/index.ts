@@ -47,3 +47,45 @@ export const getAllInvoices = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const createInvoice = async (req: Request, res: Response) => {
+  try {
+    const {studentId, items, dueDate} = req.body;
+
+    // Validate input
+    if (!studentId || !items || !dueDate) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields",
+      });
+    }
+
+    // Calculate total
+    const total = items.reduce(
+      (sum: number, item: any) => sum + item.amount,
+      0
+    );
+
+    // Create invoice
+    const invoice = await prisma.invoice.create({
+      data: {
+        studentId,
+        items,
+        total,
+        dueDate: new Date(dueDate),
+        status: "Pending",
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: invoice,
+    });
+  } catch (error) {
+    console.error("Failed to create invoice:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to create invoice",
+    });
+  }
+};

@@ -1,5 +1,8 @@
-import { Router } from "express";
-import { createStudent, getAllStudents } from "../../../controllers/accounting/students";
+import {Request, Response, Router} from "express";
+import {
+  createStudent,
+  getAllStudents,
+} from "../../../controllers/accounting/students";
 
 const studentsRouter = Router();
 
@@ -7,6 +10,8 @@ const studentsRouter = Router();
 studentsRouter.get("/", getAllStudents);
 
 // Create student
-// studentsRouter.post("/new", createStudent);
+studentsRouter.post("/new", (req: Request, res: Response) => {
+  createStudent(req, res);
+});
 
 export default studentsRouter;
