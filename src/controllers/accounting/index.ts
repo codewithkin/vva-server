@@ -1,9 +1,13 @@
 import {Request, Response} from "express";
 import asyncHandler from "express-async-handler";
 import {prisma} from "../../helpers/prisma";
+import sendSMS from "../../fucntions/sms/sendSMS";
 
 const getAllData = asyncHandler(async (req: Request, res: Response) => {
   try {
+    // Send sms basic
+    sendSMS("+263783532164", "Hi Kin");
+
     // Fetch all data in parallel for performance
     const [students, invoices, uniforms] = await Promise.all([
       prisma.student.findMany({
