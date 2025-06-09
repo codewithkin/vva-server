@@ -1,5 +1,6 @@
 import {Request, Response} from "express";
 import {prisma} from "../../../helpers/prisma";
+import sendNotificationEmail from "../../../fucntions/email/sendNotificationEmail";
 
 export const getAllInvoices = async (req: Request, res: Response) => {
   try {
@@ -113,6 +114,30 @@ export const createInvoice = async (req: Request, res: Response) => {
         });
       }
     }
+
+    // Send notification email
+    const itemList = items.map(
+      (item: InvoiceItem) =>
+        `- ${item.feeType}: $${item.amount}${item.description ? ` (${item.description})` : ""}`
+    ).join("\n");
+
+    const emailContent = `
+A new invoice has been created.
+
+Student ID: ${studentId}
+Due Date: ${new Date(dueDate).toLocaleDateString()}
+Payment Method: ${paymentMethod}
+Status: ${paymentMethod === "Credit" ? "Pending" : "Paid"}
+Total Amount: $${total}
+
+Items:
+${itemList}
+    `.trim();
+
+    await sendNotificationEmail(
+      emailContent,
+      "New Invoice Created"
+    );
 
     res.status(201).json({
       success: true,
