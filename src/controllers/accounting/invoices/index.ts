@@ -18,11 +18,7 @@ export const getAllInvoices = async (req: Request, res: Response) => {
         where: whereClause,
         orderBy: {dueDate: "asc"},
         include: {
-          student: {
-            select: {
-              name: true,
-            },
-          },
+          student: true,
           payments: true,
         },
       }),

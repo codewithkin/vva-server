@@ -6,7 +6,7 @@ import sendSMS from "../../fucntions/sms/sendSMS";
 const getAllData = asyncHandler(async (req: Request, res: Response) => {
   try {
     // Send sms basic
-    sendSMS("+263783532164", "Hi Kin");
+    // sendSMS("+263783532164", "Hi Kin");
 
     // Fetch all data in parallel for performance
     const [students, invoices, uniforms] = await Promise.all([
@@ -20,6 +20,9 @@ const getAllData = asyncHandler(async (req: Request, res: Response) => {
       prisma.invoice.findMany({
         where: {status: "Pending"}, // Focus on pending invoices
         take: 100,
+        include: {
+          student: true,
+        },
         orderBy: {dueDate: "asc"}, // Sort by urgency
       }),
       prisma.uniformIssue.findMany({
