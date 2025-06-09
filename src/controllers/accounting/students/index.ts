@@ -1,5 +1,5 @@
 import {Request, Response} from "express";
-import { prisma } from "../../../helpers/prisma";
+import {prisma} from "../../../helpers/prisma";
 
 export const getAllStudents = async (req: Request, res: Response) => {
   try {
@@ -30,6 +30,7 @@ export const getAllStudents = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    console.log("Failed to fetch students: ", error);
     res.status(500).json({
       success: false,
       error: "Failed to fetch students",
