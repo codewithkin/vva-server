@@ -3,6 +3,6 @@ import { getAllInvoices } from "../../../controllers/accounting/invoices";
 
 const invoicesRouter = Router();
 
-invoicesRouter.get("/invoices/", getAllInvoices);
+invoicesRouter.get("/", getAllInvoices);
 
 export default invoicesRouter;
