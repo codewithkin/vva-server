@@ -45,8 +45,7 @@ export const getPaidStudents = async (): Promise<PaidStudent[]> => {
           return false;
         }
 
-        const invoiceItems: InvoiceItem[] = (invoice.items ||
-          []) as InvoiceItem[];
+        const invoiceItems: InvoiceItem[] = (invoice.items as unknown as InvoiceItem[]) || [];
         const containsSchoolFees = invoiceItems.some(
           (item) => item.feeType === "School Fees"
         );

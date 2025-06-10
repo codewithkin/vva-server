@@ -4,6 +4,7 @@ import {
   getAllStudents,
 } from "../../../controllers/accounting/students";
 import { getUnpaidStudents } from "../../../helpers/getUnpaidStudents";
+import { getPaidStudents } from "../../../helpers/getPaidStudents";
 
 const studentsRouter = Router();
 
@@ -17,6 +18,10 @@ studentsRouter.post("/new", (req: Request, res: Response) => {
 
 studentsRouter.get("/unpaid",async (req: Request, res: Response) => {
   res.json(await getUnpaidStudents());
+});
+
+studentsRouter.get("/paid", async (req: Request, res: Response) => {
+  res.json(await getPaidStudents());
 });
 
 export default studentsRouter;
