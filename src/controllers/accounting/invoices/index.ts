@@ -2,6 +2,7 @@ import {Request, Response} from "express";
 import {prisma} from "../../../helpers/prisma";
 import sendNotificationEmail from "../../../fucntions/email/sendNotificationEmail";
 import nodemailer from "nodemailer";
+import {Invoice} from "../../../generated/prisma";
 
 interface InvoiceItem {
   feeType: string;
@@ -14,6 +15,76 @@ interface InvoiceItem {
   amount: number;
   description?: string;
 }
+
+interface InvoiceItem {
+  feeType: string;
+  amount: number;
+  description?: string;
+}
+
+// Extend Prisma's Invoice type to correctly type the 'items' field as an array
+interface InvoiceForCredit extends Omit<Invoice, "items"> {
+  items: InvoiceItem[];
+}
+
+export const getCreditInvoicesForStudent = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {studentId} = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing studentId parameter.",
+      });
+    }
+
+    // Fetch invoices for the student where status is 'Pending'
+    // Since 'amountDue' does not exist, we only filter by status.
+    const outstandingCreditInvoices = await prisma.invoice.findMany({
+      where: {
+        studentId: studentId,
+        status: "Pending", // Credit invoices are assumed to be 'Pending'
+        // Removed: amountDue: { gt: 0, } // This property does not exist
+      },
+      select: {
+        id: true,
+        total: true, // Total is used as the amount to be fulfilled
+        dueDate: true,
+        status: true,
+        items: true, // Include items for display if needed on frontend
+      },
+      orderBy: {
+        dueDate: "asc", // Order by due date for better user experience
+      },
+    });
+
+    // Map the results to ensure 'items' is correctly typed if it's JSON in Prisma
+    const formattedInvoices = outstandingCreditInvoices.map((invoice) => ({
+      ...invoice,
+      items: invoice.items as unknown as InvoiceItem[], // Cast JSON to unknown first, then to InvoiceItem[]
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedInvoices,
+    });
+  } catch (error: any) {
+    console.error(
+      "Failed to fetch outstanding credit invoices:",
+      error.message || error
+    );
+    res.status(500).json({
+      success: false,
+      error:
+        "Failed to fetch outstanding credit invoices due to a server error.",
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+};
 
 export const getAllInvoices = async (req: Request, res: Response) => {
   try {
