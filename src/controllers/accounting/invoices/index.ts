@@ -1,6 +1,7 @@
 import {Request, Response} from "express";
 import {prisma} from "../../../helpers/prisma";
 import sendNotificationEmail from "../../../fucntions/email/sendNotificationEmail";
+import nodemailer from "nodemailer";
 
 export const getAllInvoices = async (req: Request, res: Response) => {
   try {
@@ -43,6 +44,12 @@ export const getAllInvoices = async (req: Request, res: Response) => {
     });
   }
 };
+
+interface InvoiceItem {
+  feeType: string;
+  amount: number;
+  description?: string;
+}
 
 interface InvoiceItem {
   feeType: string;
@@ -115,11 +122,25 @@ export const createInvoice = async (req: Request, res: Response) => {
       }
     }
 
-    // Send notification email
-    const itemList = items.map(
-      (item: InvoiceItem) =>
-        `- ${item.feeType}: $${item.amount}${item.description ? ` (${item.description})` : ""}`
-    ).join("\n");
+    // --- Check for "School Fees" ---
+    const hasSchoolFeesItem = items.some(
+      (item: InvoiceItem) => item.feeType === "School Fees"
+    );
+    if (hasSchoolFeesItem) {
+      console.log(
+        `Invoice ${invoice.id} includes "School Fees". Unpaid student data might need to be refreshed.`
+      );
+    }
+
+    // --- Send Notification Email Logic ---
+    const itemList = items
+      .map(
+        (item: InvoiceItem) =>
+          `- ${item.feeType}: $${item.amount}${
+            item.description ? ` (${item.description})` : ""
+          }`
+      )
+      .join("\n");
 
     const emailContent = `
 A new invoice has been created.
@@ -128,30 +149,43 @@ Student ID: ${studentId}
 Due Date: ${new Date(dueDate).toLocaleDateString()}
 Payment Method: ${paymentMethod}
 Status: ${paymentMethod === "Credit" ? "Pending" : "Paid"}
-Total Amount: $${total}
+Total Amount: $${total.toLocaleString()}
 
 Items:
 ${itemList}
-    `.trim();
+      `.trim();
 
-    await sendNotificationEmail(
-      emailContent,
-      "New Invoice Created"
-    );
+    // Nodemailer transporter setup
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "kinzinzombe07@gmail.com",
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Send the email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER, // Ensure EMAIL_USER is set in your environment
+      to: "stephchikamhi@gmail.com", // Or a configurable recipient
+      subject: "New Invoice Created",
+      text: emailContent,
+    });
 
     res.status(201).json({
       success: true,
       message: "Invoice and associated records created successfully!",
       data: invoice,
     });
-    return;
   } catch (error) {
-    console.error("Failed to create invoice:", error);
+    console.error(
+      "Failed to create invoice or send notification email:",
+      error
+    ); // More specific error log
     res.status(500).json({
       success: false,
       error: "Failed to create invoice due to a server error.",
     });
-    return;
   } finally {
     await prisma.$disconnect();
   }
