@@ -3,6 +3,18 @@ import {prisma} from "../../../helpers/prisma";
 import sendNotificationEmail from "../../../fucntions/email/sendNotificationEmail";
 import nodemailer from "nodemailer";
 
+interface InvoiceItem {
+  feeType: string;
+  amount: number;
+  description?: string;
+}
+
+interface InvoiceItem {
+  feeType: string;
+  amount: number;
+  description?: string;
+}
+
 export const getAllInvoices = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -44,23 +56,32 @@ export const getAllInvoices = async (req: Request, res: Response) => {
     });
   }
 };
-
-interface InvoiceItem {
-  feeType: string;
-  amount: number;
-  description?: string;
+// Placeholder for SMS sending function
+// In a real application, you would integrate with an SMS API like Twilio, Vonage, etc.
+async function sendSMS(to: string, message: string): Promise<void> {
+  console.log(`[SMS Mock] Sending SMS to ${to}: ${message}`);
+  // Implement actual SMS API call here
+  // Twilio code removed
 }
 
-interface InvoiceItem {
-  feeType: string;
-  amount: number;
-  description?: string;
-}
+// Assuming principalContact and email are available from environment variables or config
+const PRINCIPAL_CONTACT = process.env.PRINCIPAL_PHONE_NUMBER || "0771234567"; // Replace with actual principal number
+const PRINCIPAL_EMAIL =
+  process.env.PRINCIPAL_EMAIL || "kinzinzombe07@gmail.com"; // Replace with actual principal email
 
 export const createInvoice = async (req: Request, res: Response) => {
   try {
-    const {studentId, items, dueDate, paymentMethod} = req.body;
+    // Destructure new fields: amountDue and linkedInvoiceId
+    const {
+      studentId,
+      items,
+      dueDate,
+      paymentMethod,
+      amountDue,
+      linkedInvoiceId,
+    } = req.body;
 
+    // --- Initial Validation ---
     if (!studentId || !items || !dueDate || !paymentMethod) {
       return res.status(400).json({
         success: false,
@@ -72,7 +93,7 @@ export const createInvoice = async (req: Request, res: Response) => {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
-        error: "Items must be a non-empty array",
+        error: "Invoice must contain at least one item",
       });
     }
 
@@ -81,48 +102,166 @@ export const createInvoice = async (req: Request, res: Response) => {
       0
     );
 
+    // --- Determine Invoice Type Flags ---
+    const isCreditPayment = paymentMethod === "Credit";
+    const isFulfillmentInvoice = items.some(
+      (item: InvoiceItem) => item.feeType === "Fulfillment"
+    );
+
+    // --- Specific Validations based on type ---
+    if (
+      isCreditPayment &&
+      (amountDue === undefined ||
+        typeof amountDue !== "number" ||
+        amountDue < 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Valid 'amountDue' (non-negative number) is required for 'Credit' payment method.",
+      });
+    }
+    // For fulfillment invoice, enforce single item and linkedInvoiceId
+    if (isFulfillmentInvoice) {
+      if (!linkedInvoiceId) {
+        return res.status(400).json({
+          success: false,
+          error: "'linkedInvoiceId' is required for 'Fulfillment' fee type.",
+        });
+      }
+      if (items.length !== 1 || items[0].feeType !== "Fulfillment") {
+        return res.status(400).json({
+          success: false,
+          error:
+            "A 'Fulfillment' invoice must contain exactly one item, and that item must be of type 'Fulfillment'.",
+        });
+      }
+      if (paymentMethod === "Credit") {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Fulfillment invoices cannot have 'Credit' as a payment method, as they represent an actual payment.",
+        });
+      }
+    }
+
+    // --- Fetch Student Details (for SMS) ---
+    const student = await prisma.student.findUnique({
+      where: {id: studentId},
+      select: {id: true, name: true, parentContact: true},
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: "Student not found.",
+      });
+    }
+
+    // --- Determine the status of the new invoice ---
+    let newInvoiceStatus: "Pending" | "Paid";
+    if (isCreditPayment) {
+      newInvoiceStatus = "Pending";
+    } else {
+      newInvoiceStatus = "Paid"; // Immediate payment or fulfillment
+    }
+
+    // --- Create New Invoice ---
     const invoice = await prisma.invoice.create({
       data: {
         studentId,
-        items: items as any,
+        items: items as any, // Cast to any if Prisma schema expects Json
         total,
         dueDate: new Date(dueDate),
-        status: paymentMethod === "Credit" ? "Pending" : "Paid",
+        status: newInvoiceStatus,
       },
     });
 
-    await prisma.payment.create({
-      data: {
-        invoiceId: invoice.id,
-        amount: total,
-        method: paymentMethod,
-        date: new Date(),
-      },
-    });
+    // --- Create Payment Record (Conditional) ---
+    // A payment record is created only if it's not a 'Credit' invoice (meaning, an actual payment was made)
+    if (!isCreditPayment) {
+      await prisma.payment.create({
+        data: {
+          invoiceId: invoice.id,
+          amount: total, // For fulfillment, this is the amount paid
+          method: paymentMethod,
+          date: new Date(),
+        },
+      });
+    }
 
+    // --- Handle Fulfillment Invoice Specific Updates ---
+    if (isFulfillmentInvoice && linkedInvoiceId) {
+      // Find and update the original credit invoice
+      const originalCreditInvoice = await prisma.invoice.findUnique({
+        where: {id: linkedInvoiceId},
+      });
+
+      if (originalCreditInvoice) {
+        await prisma.invoice.update({
+          where: {id: linkedInvoiceId},
+          data: {
+            status: "Paid", // Mark the original credit invoice as paid
+          },
+        });
+        console.log(
+          `Original credit invoice ${linkedInvoiceId} marked as Paid.`
+        );
+      } else {
+        console.warn(
+          `Attempted to fulfill non-existent invoice with ID: ${linkedInvoiceId}`
+        );
+        // Depending on your business logic, you might want to return an error here
+        // However, for robustness, we'll continue creating the fulfillment invoice
+      }
+
+      // Send SMS to parent (thanking for payment) and principal (notification)
+      // if (student.parentContact) {
+      //   await sendSMS(
+      //     student.parentContact,
+      //     `Dear VVA Parent, Thank you for your payment of $${total.toFixed(
+      //       2
+      //     )} for ${student.name}'s invoice. Your account has been updated. VVA.`
+      //   );
+      // } else {
+      //   console.warn(
+      //     `No parent contact found for student ${student.name} (${student.id}). Cannot send payment confirmation SMS.`
+      //   );
+      // }
+
+      // await sendSMS(
+      //   PRINCIPAL_CONTACT,
+      //   `New payment of $${total.toFixed(2)} received for student ${
+      //     student.name
+      //   }. Invoice ID: ${invoice.id.substring(0, 6)}...`
+      // );
+    }
+
+    // --- Handle Uniform Issue Creation (Existing Logic) ---
     const uniformItems = items.filter(
       (item: InvoiceItem) => item.feeType === "Uniform"
     );
 
     if (uniformItems.length > 0) {
-      const isCredit = paymentMethod === "Credit";
+      const isCreditForUniformIssue = isCreditPayment; // Uniform issue credit status depends on the overall invoice payment method
       for (const item of uniformItems) {
         await prisma.uniformIssue.create({
           data: {
             studentId: studentId,
             items: {
+              // Ensure this matches your UniformIssue model's Json field structure
               feeType: item.feeType,
               amount: item.amount,
               description: item.description,
             } as any,
             date: new Date(),
-            isCredit: isCredit,
+            isCredit: isCreditForUniformIssue,
           },
         });
       }
     }
 
-    // --- Check for "School Fees" ---
+    // --- Check for "School Fees" (Existing Logic) ---
     const hasSchoolFeesItem = items.some(
       (item: InvoiceItem) => item.feeType === "School Fees"
     );
@@ -136,55 +275,96 @@ export const createInvoice = async (req: Request, res: Response) => {
     const itemList = items
       .map(
         (item: InvoiceItem) =>
-          `- ${item.feeType}: $${item.amount}${
-            item.description ? ` (${item.description})` : ""
-          }`
+          `- ${item.feeType}: $${item.amount.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}${item.description ? ` (${item.description})` : ""}`
       )
       .join("\n");
+
+    const emailSubject = isFulfillmentInvoice
+      ? "Invoice Fulfilled & Payment Received"
+      : "New Invoice Created";
 
     const emailContent = `
 A new invoice has been created.
 
-Student ID: ${studentId}
+Student Name: ${student.name}
+Student ID: ${student.id}
 Due Date: ${new Date(dueDate).toLocaleDateString()}
 Payment Method: ${paymentMethod}
-Status: ${paymentMethod === "Credit" ? "Pending" : "Paid"}
-Total Amount: $${total.toLocaleString()}
+Status: ${invoice.status}
+Total Amount: $${total.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}
+${
+  isCreditPayment && amountDue !== undefined
+    ? `Amount Due: $${amountDue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
+    : ""
+}
+${
+  isFulfillmentInvoice && linkedInvoiceId
+    ? `Fulfilling previous Invoice ID: ${linkedInvoiceId}`
+    : ""
+}
 
 Items:
 ${itemList}
-      `.trim();
+    `.trim();
 
     // Nodemailer transporter setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "kinzinzombe07@gmail.com",
-        pass: process.env.EMAIL_PASS,
+        user: "kinzinzombe07@gmail.com", // Ensure EMAIL_USER is set in your environment
+        pass: "bqsv aqfa rjrg ugtn",
       },
     });
 
-    // Send the email
+    // Send the email to default recipient and principal
     await transporter.sendMail({
-      from: process.env.EMAIL_USER, // Ensure EMAIL_USER is set in your environment
-      to: "stephchikamhi@gmail.com", // Or a configurable recipient
-      subject: "New Invoice Created",
+      from: process.env.EMAIL_USER,
+      to: `kinzinzombe07@gmail.com, ${PRINCIPAL_EMAIL}`, // Include principal email
+      subject: emailSubject,
       text: emailContent,
     });
+
+    // --- Send SMS for New Credit Invoices (if applicable) ---
+    // if (isCreditPayment) {
+    //   if (student.parentContact) {
+    //     await sendSMS(
+    //       student.parentContact,
+    //       `Dear VVA Parent, Please note that ${
+    //         student.name
+    //       }'s invoice for $${total.toFixed(2)} is due on ${new Date(
+    //         dueDate
+    //       ).toLocaleDateString()}. Kindly pay before then. VVA.`
+    //     );
+    //   } else {
+    //     console.warn(
+    //       `No parent contact found for student ${student.name} (${student.id}). Cannot send credit invoice SMS.`
+    //     );
+    //   }
+    // }
 
     res.status(201).json({
       success: true,
       message: "Invoice and associated records created successfully!",
       data: invoice,
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Type 'error' as 'any' for better error handling access
     console.error(
-      "Failed to create invoice or send notification email:",
-      error
-    ); // More specific error log
+      "Failed to create invoice or send notification:",
+      error.message || error
+    ); // Log specific error message
     res.status(500).json({
       success: false,
-      error: "Failed to create invoice due to a server error.",
+      error: error.message || "Failed to create invoice due to a server error.", // Send specific error message
     });
   } finally {
     await prisma.$disconnect();
