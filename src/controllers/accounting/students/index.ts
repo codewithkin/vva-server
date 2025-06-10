@@ -1,7 +1,8 @@
-import {Request, Response} from "express";
-import {prisma} from "../../../helpers/prisma";
-import {stringify} from "csv-stringify/sync";
+import { Request, Response } from "express";
+import { prisma } from "../../../helpers/prisma";
+import { stringify } from "csv-stringify/sync";
 
+// Create Student
 export const createStudent = async (
   req: Request,
   res: Response
@@ -12,16 +13,15 @@ export const createStudent = async (
       class: studentClass,
       contact,
       parentContact,
-      fees, // <-- NEW: Destructure the fees field
+      fees,
     } = req.body;
 
-    // Validate required fields (fees can be optional as it has a default in Prisma)
     if (!name || !studentClass || !contact || !parentContact) {
       return res.status(400).json({ error: "All fields (except fees) are required" });
     }
 
     const existing = await prisma.student.findFirst({
-      where: { name }, // Assuming 'name' is still used as the unique admission ID
+      where: { name },
     });
 
     if (existing) {
@@ -34,7 +34,7 @@ export const createStudent = async (
         class: studentClass,
         contact,
         parentContact,
-        fees: fees !== undefined ? parseInt(fees) : undefined, // <-- NEW: Add fees.
+        fees: fees !== undefined ? parseInt(fees) : undefined,
       },
     });
 
@@ -47,6 +47,7 @@ export const createStudent = async (
   }
 };
 
+// Get All Students
 export const getAllStudents = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -59,9 +60,9 @@ export const getAllStudents = async (req: Request, res: Response) => {
     const year = now.getFullYear();
 
     const terms = [
-      {start: new Date(`${year}-01-14`), end: new Date(`${year}-04-10`)},
-      {start: new Date(`${year}-05-13`), end: new Date(`${year}-08-07`)},
-      {start: new Date(`${year}-09-09`), end: new Date(`${year}-12-01`)},
+      { start: new Date(`${year}-01-14`), end: new Date(`${year}-04-10`) },
+      { start: new Date(`${year}-05-13`), end: new Date(`${year}-08-07`) },
+      { start: new Date(`${year}-09-09`), end: new Date(`${year}-12-01`) },
     ];
     const currentTerm =
       terms.find((t) => now >= t.start && now <= t.end) ?? terms[2];
@@ -69,7 +70,7 @@ export const getAllStudents = async (req: Request, res: Response) => {
     const students = await prisma.student.findMany({
       skip,
       take: download ? undefined : limit,
-      include: {invoices: true, uniforms: true},
+      include: { invoices: true, uniforms: true },
     });
 
     const filtered = students.filter((student) => {
@@ -126,5 +127,42 @@ export const getAllStudents = async (req: Request, res: Response) => {
       success: false,
       error: "Failed to fetch students",
     });
+  }
+};
+
+// Get Student By ID
+export const getStudentById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ success: false, error: "Student ID is required." });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: id },
+      include: {
+        invoices: {
+          include: {
+            payments: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          }
+        },
+        uniforms: true,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, error: "Student not found." });
+    }
+
+    res.status(200).json({ success: true, data: student });
+  } catch (error: any) {
+    console.error("Failed to fetch student by ID:", error.message || error);
+    res.status(500).json({ success: false, error: "Failed to fetch student details due to a server error." });
+  } finally {
+    await prisma.$disconnect();
   }
 };
