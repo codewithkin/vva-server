@@ -29,7 +29,7 @@ model Invoice {
   id          String     @id @default(uuid())
   student     Student    @relation(fields: [studentId], references: [id])
   studentId   String
-  items       Json       // { feeType: "Uniform", amount: 50 }
+  items       Json       // { feeType: "Uniform", "School Fees" amount: 50 }
   total       Float
   createdAt   DateTime @default(now())
   dueDate     DateTime
