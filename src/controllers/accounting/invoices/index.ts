@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import {prisma} from "../../../helpers/prisma";
 import sendNotificationEmail from "../../../fucntions/email/sendNotificationEmail";
 import nodemailer from "nodemailer";
-import {Invoice} from "../../../generated/prisma";
+import {Invoice} from "../../../../generated/prisma";
 
 interface InvoiceItem {
   feeType: string;
