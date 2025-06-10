@@ -1,8 +1,6 @@
 import {getCurrentTerm} from "./getCurrentTerm";
 import {prisma} from "./prisma";
 
-const SCHOOL_FEES_PER_TERM = 130;
-
 interface InvoiceItem {
   feeType: string;
   amount: number;
@@ -45,7 +43,8 @@ export const getPaidStudents = async (): Promise<PaidStudent[]> => {
           return false;
         }
 
-        const invoiceItems: InvoiceItem[] = (invoice.items as unknown as InvoiceItem[]) || [];
+        const invoiceItems: InvoiceItem[] =
+          (invoice.items as unknown as InvoiceItem[]) || [];
         const containsSchoolFees = invoiceItems.some(
           (item) => item.feeType === "School Fees"
         );
@@ -63,6 +62,8 @@ export const getPaidStudents = async (): Promise<PaidStudent[]> => {
             0
           );
         }
+
+        const SCHOOL_FEES_PER_TERM = student.fees;
 
         const arrears = SCHOOL_FEES_PER_TERM - totalPaymentsAppliedToSchoolFees;
 

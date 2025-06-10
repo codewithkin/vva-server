@@ -21,6 +21,7 @@ model Student {
   contact     String
   parentContact String
   createdAt   DateTime @default(now())
+  fees        Int @default(130)
   invoices    Invoice[]
   uniforms    UniformIssue[]
 }
