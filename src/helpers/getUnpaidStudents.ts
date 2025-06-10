@@ -13,7 +13,6 @@ interface UnpaidStudent {
     id: string;
     name: string;
     class: string;
-    admissionId: string;
     arrears: number;
 }
 
@@ -47,8 +46,7 @@ export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
                     return false;
                 }
 
-                const invoiceItems: InvoiceItem[] = (invoice.items ||
-                    []) as InvoiceItem[];
+                const invoiceItems: InvoiceItem[] = ((invoice.items || []) as unknown) as InvoiceItem[];
                 const containsSchoolFees = invoiceItems.some(
                     (item) => item.feeType === "School Fees"
                 );
@@ -77,7 +75,6 @@ export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
                         id: student.id,
                         name: student.name,
                         class: student.class,
-                        admissionId: student.admissionId,
                         arrears: arrears,
                     });
                 }
