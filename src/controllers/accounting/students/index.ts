@@ -12,18 +12,20 @@ export const createStudent = async (
       class: studentClass,
       contact,
       parentContact,
+      fees, // <-- NEW: Destructure the fees field
     } = req.body;
 
+    // Validate required fields (fees can be optional as it has a default in Prisma)
     if (!name || !studentClass || !contact || !parentContact) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({ error: "All fields (except fees) are required" });
     }
 
     const existing = await prisma.student.findFirst({
-      where: { name },
+      where: { name }, // Assuming 'name' is still used as the unique admission ID
     });
 
     if (existing) {
-      return res.status(409).json({ error: "Admission ID already exists" });
+      return res.status(409).json({ error: "Student with this name (Admission ID) already exists" });
     }
 
     const student = await prisma.student.create({
@@ -32,6 +34,7 @@ export const createStudent = async (
         class: studentClass,
         contact,
         parentContact,
+        fees: fees !== undefined ? parseInt(fees) : undefined, // <-- NEW: Add fees.
       },
     });
 
