@@ -46,23 +46,21 @@ export const getUnpaidStudents = async (): Promise<any[]> => {
           console.log("School fees invoices: ", containsSchoolFees);
 
           if (containsSchoolFees) {
-            totalPaymentsAppliedToSchoolFees += invoice.payments.reduce(
-              (sum, payment) => sum + payment.amount,
-              0
-            );
+            totalPaymentsAppliedToSchoolFees += invoice.total;
           }
         }
       }
 
-      const arrears = Math.max(
-        0,
-        SCHOOL_FEES_PER_TERM - totalPaymentsAppliedToSchoolFees
-      );
+      const arrears = SCHOOL_FEES_PER_TERM - totalPaymentsAppliedToSchoolFees;
+
+      console.log(`Arreas for ${student.name} are ${arrears}`);
 
       if (arrears > 0) {
         unpaidStudents.push(student);
       }
     }
+
+    console.log("Unpaid students: ", unpaidStudents);
 
     return unpaidStudents;
   } catch (error) {
