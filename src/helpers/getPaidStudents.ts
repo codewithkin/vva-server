@@ -68,14 +68,12 @@ export const getPaidStudents = async (): Promise<PaidStudent[]> => {
         const arrears = SCHOOL_FEES_PER_TERM - totalPaymentsAppliedToSchoolFees;
 
         if (arrears <= 0) {
-          paidStudents.push({
-            id: student.id,
-            name: student.name,
-            class: student.class,
-          });
+          paidStudents.push(student);
         }
       }
     }
+
+    console.log("Paid students: ", paidStudents);
 
     return paidStudents;
   } catch (error) {

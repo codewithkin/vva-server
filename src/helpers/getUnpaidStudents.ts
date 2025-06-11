@@ -1,5 +1,5 @@
-import { getCurrentTerm } from "./getCurrentTerm";
-import { prisma } from "./prisma";
+import {getCurrentTerm} from "./getCurrentTerm";
+import {prisma} from "./prisma";
 
 const SCHOOL_FEES_PER_TERM = 130;
 
@@ -19,7 +19,7 @@ interface UnpaidStudent {
 export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
   try {
     const currentTermInfo = getCurrentTerm();
-    const { startDate, endDate } = currentTermInfo;
+    const {startDate, endDate} = currentTermInfo;
 
     const allStudents = await prisma.student.findMany({
       include: {
@@ -39,13 +39,18 @@ export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
 
       for (const invoice of student.invoices) {
         const invoiceDueDate = new Date(invoice.dueDate);
-        const isWithinTerm = invoiceDueDate >= startDate && invoiceDueDate <= endDate;
+        const isWithinTerm =
+          invoiceDueDate >= startDate && invoiceDueDate <= endDate;
 
         if (isWithinTerm) {
-          const invoiceItems: InvoiceItem[] = (invoice.items || []) as unknown as InvoiceItem[];
+          const invoiceItems: InvoiceItem[] = (invoice.items ||
+            []) as unknown as InvoiceItem[];
+          console.log("Invoice items: ", invoiceItems);
           const containsSchoolFees = invoiceItems.some(
             (item) => item.feeType === "School Fees"
           );
+
+          console.log("School fees invoices: ", containsSchoolFees);
 
           if (containsSchoolFees) {
             totalPaymentsAppliedToSchoolFees += invoice.payments.reduce(

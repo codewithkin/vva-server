@@ -18,11 +18,15 @@ studentsRouter.post("/new", (req: Request, res: Response) => {
 });
 
 studentsRouter.get("/unpaid", async (req: Request, res: Response) => {
-  res.json(await getUnpaidStudents());
+  const unpaidStudents = await getUnpaidStudents();
+
+  res.json({data: unpaidStudents, success: true});
 });
 
 studentsRouter.get("/paid", async (req: Request, res: Response) => {
-  res.json(await getPaidStudents());
+  const paidStudents = await getPaidStudents();
+
+  res.json({data: paidStudents, success: true});
 });
 
 studentsRouter.get("/:id", async (req: Request, res: Response) => {
