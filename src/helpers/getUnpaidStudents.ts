@@ -9,14 +9,7 @@ interface InvoiceItem {
   description?: string;
 }
 
-interface UnpaidStudent {
-  id: string;
-  name: string;
-  class: string;
-  arrears: number;
-}
-
-export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
+export const getUnpaidStudents = async (): Promise<any[]> => {
   try {
     const currentTermInfo = getCurrentTerm();
     const {startDate, endDate} = currentTermInfo;
@@ -32,7 +25,7 @@ export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
       },
     });
 
-    const unpaidStudents: UnpaidStudent[] = [];
+    const unpaidStudents: any[] = [];
 
     for (const student of allStudents) {
       let totalPaymentsAppliedToSchoolFees = 0;
@@ -67,12 +60,7 @@ export const getUnpaidStudents = async (): Promise<UnpaidStudent[]> => {
       );
 
       if (arrears > 0) {
-        unpaidStudents.push({
-          id: student.id,
-          name: student.name,
-          class: student.class,
-          arrears: arrears,
-        });
+        unpaidStudents.push(student);
       }
     }
 
