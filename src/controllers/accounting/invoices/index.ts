@@ -441,3 +441,53 @@ ${itemList}
     await prisma.$disconnect();
   }
 };
+
+export const deleteInvoice = async (req: Request, res: Response) => {
+  try {
+    const {id: invoiceId} = req.params;
+
+    console.log("Invoice id: ", invoiceId);
+
+    if (!invoiceId) {
+      res.status(400).json({
+        success: false,
+        error: "Missing invoiceId parameter.",
+      });
+    }
+
+    // Check if the invoice exists
+    const existingInvoice = await prisma.invoice.findUnique({
+      where: {id: invoiceId},
+    });
+
+    if (!existingInvoice) {
+      res.status(404).json({
+        success: false,
+        error: "Invoice not found.",
+      });
+    }
+
+    // Delete the payment
+    await prisma.payment.deleteMany({
+      where: {invoiceId: invoiceId},
+    });
+
+    // Delete the invoice
+    await prisma.invoice.delete({
+      where: {id: invoiceId},
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Invoice deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to delete invoice:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to delete invoice due to a server error.",
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+};

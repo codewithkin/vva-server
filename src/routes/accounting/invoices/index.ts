@@ -3,6 +3,7 @@
 import {Request, Response, Router} from "express";
 import {
   createInvoice,
+  deleteInvoice,
   getAllInvoices,
   getCreditInvoicesForStudent,
 } from "../../../controllers/accounting/invoices";
@@ -11,6 +12,8 @@ const invoicesRouter = Router();
 
 // Existing routes
 invoicesRouter.get("/", getAllInvoices);
+
+invoicesRouter.delete("/:id", deleteInvoice);
 
 invoicesRouter.post("/new", (req: Request, res: Response) => {
   createInvoice(req, res);
